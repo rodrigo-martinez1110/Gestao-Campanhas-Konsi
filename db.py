@@ -1,28 +1,44 @@
 import streamlit as st
-from sqlalchemy import create_engine
 import pandas as pd
+from supabase import create_client
+
+
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_API_KEY = st.secrets["SUPABASE_API_KEY"]
+
+supabase = create_client(SUPABASE_URL, SUPABASE_API_KEY)
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 
-engine = create_engine(SUPABASE_URL)
+
+supabase = create_client(SUPABASE_URL, SUPABASE_API_KEY)
+
 
 def inserir_campanha(dados):
-    df = pd.DataFrame([dados])
-    df.to_sql("campanhas_planejadas", engine, if_exists="append", index=False)
+    response = supabase.table("campanhas_planejadas").insert(dados).execute()
+    if response.status_code not in [200, 201]:
+        st.error(f"Erro ao inserir campanha: {response.status_code} - {response.json()}")
     
 def listar_campanhas_por_semana(semana_iso):
-    query = f"""
-        SELECT * FROM campanhas_planejadas
-        WHERE semana_iso = '{semana_iso}'
-        ORDER BY data_disparo;
-    """
-    return pd.read_sql(query, engine)
+    response = supabase \
+        .table("campanhas_planejadas") \
+        .select("*") \
+        .eq("semana_iso", semana_iso) \
+        .order("data_disparo") \
+        .execute()
+
+    if response.status_code == 200:
+        return response.data  # pode usar pd.DataFrame(response.data) se quiser
+    else:
+        st.error("Erro ao listar campanhas: " + str(response.status_code))
+        return []
 
 def atualizar_quantidade_disparo(tag_campanha, nova_quantidade):
-    query = f"""
-    UPDATE campanhas_planejadas
-    SET quantidade_disparo = {nova_quantidade}
-    WHERE tag_campanha = '{tag_campanha}';
-    """
-    with engine.connect() as conn:
-        conn.execute(query)
+    response = supabase \
+        .table("campanhas_planejadas") \
+        .update({"quantidade_disparo": nova_quantidade}) \
+        .eq("tag_campanha", tag_campanha) \
+        .execute()
+
+    if response.status_code not in [200, 204]:
+        st.error("Erro ao atualizar: " + str(response.status_code))
