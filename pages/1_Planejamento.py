@@ -51,7 +51,8 @@ st.markdown(f"### Semana escolhida: {semana_selecionada}")
 # Calcula semana_iso a partir da segunda-feira
 semana_iso = calcular_semana_iso(str(segunda_escolhida.date()))
 
-campanhas = listar_campanhas_por_semana(semana_iso)
+campanhas_data = listar_campanhas_por_semana(semana_iso)
+campanhas = pd.DataFrame(campanhas_data)
 
 if not campanhas.empty:
     campanhas['data_disparo'] = pd.to_datetime(campanhas['data_disparo'])
